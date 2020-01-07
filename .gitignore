@@ -1,0 +1,22 @@
+#
+# OS Generated
+#
+.DS_Store
+.DS_Store?
+
+#
+# Application Generated
+#
+main.log
+vms_to_protect.txt
+
+#
+# Visual Studio Code
+#
+.settings/
+.classpath
+.project
+.vscode/
+.vscode/launch.json
+.vscode/settings.json
+__pycache__/
