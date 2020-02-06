@@ -16,13 +16,19 @@ sys.path.insert(0, '/usr/local/lib/python3.7/site-packages/datrium')
 
 logger = logging.getLogger()
 
+'''Function to establish connection to DVX'''
+
 
 def connect(ip, username, password):
     dvx1 = Dvx(ip, username, password)
     logger.info('')
     logger.info('-------------------------------------')
     logger.info('DVX connection sucesfully established')
+    test_connection(dvx1)   # Test DVX connectivy
     return dvx1
+
+
+'''Function to retrieve a single vm by name'''
 
 
 def get_vm(dvx, name):
@@ -32,12 +38,16 @@ def get_vm(dvx, name):
     return response.vm[0]
 
 
+'''Function to list all vms'''
+
+
 def get_vms(dvx):
     request = vms.GetRequest()
-    cookie = None
-    all_vms = []
     get_response = vms.get(dvx=dvx, request=request)
     return get_response
+
+
+''' Function to take snapshot of individual vms'''
 
 
 def take_vm_snapshot(dvx, name, retention, prefix):
@@ -51,6 +61,9 @@ def take_vm_snapshot(dvx, name, retention, prefix):
     return task
 
 
+''' Function to replicate a given vm snapshot'''
+
+
 def replicate_vm_snapshot(dvx, snapId, replicaSiteName, retention):
     assert snapId != None, "SnapId not found"
     request = snapshots.ReplicateRequest()
@@ -60,3 +73,16 @@ def replicate_vm_snapshot(dvx, snapId, replicaSiteName, retention):
     logger.info('Replicating snapshot %s' % snapId)
     task_response = snapshots.replicate(dvx=dvx, request=request)
     return task_response
+
+
+''' Function to test connectivity to DVX with a vm.GetRequest '''
+
+
+def test_connection(dvx):
+
+    try:
+        request = vms.GetRequest()
+        get_response = vms.get(dvx=dvx, request=request)
+    except:
+        logger.error('Unexpected error: ' + str(sys.exc_info()[0]))
+        raise

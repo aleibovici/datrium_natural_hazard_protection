@@ -16,7 +16,7 @@ You MUST register for a free API key with OpenWeather at
 https://home.openweathermap.org/users/sign_up and add to the key to
 the main.config file.
 
-Events are logged to main.log
+Events are logged to main.log and docker logs.
 
 ## Author
 

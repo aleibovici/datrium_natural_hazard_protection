@@ -1,0 +1,8 @@
+docker-compose.yml
+dockerfile
+main.log
+com.myvirtualcloud.dvx.automation.code-workspace
+vms_to_protect.txt
+.gitignore
+__pycache__
+.vscode

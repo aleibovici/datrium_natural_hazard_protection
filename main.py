@@ -1,13 +1,14 @@
 #!/usr/bin/env python
 
+import os
+from logging.config import dictConfig
+import settings
+import configparser
+import time
+import logging
+import earthquake
 import da
 import weather
-import earthquake
-import logging
-import time
-import configparser
-import settings
-from logging.config import dictConfig
 
 ''' Initiate global variables '''
 
@@ -60,20 +61,49 @@ def connect_dvx(prod_dvx_fqdn: str,
 ''' Function to load and parse application parameters file and log '''
 
 
-def load_config(filename: str):
+def load_config(configFilePath: str, log: bool):
+    logger.info(' ')
     logger.info('Loading configuration')
+
     config = configparser.ConfigParser()
-    configFilePath = filename
     config.read(configFilePath)
     settings.CONFIG_DICT = dict(config.items('DEFAULT'))  # read config file
+
+    if is_docker():   # test for docker conatiner and reload settings from os.environ
+        for key in settings.CONFIG_DICT:
+            if key in os.environ:
+                settings.CONFIG_DICT[key] = os.environ[key]
+
     for key in settings.CONFIG_DICT:
         if (not key == 'prod_dvx_username') and (not key == 'prod_dvx_password') and (not key == 'pyowm_api_key'):   # Do not log username, password and API key
                                                                                     # Username and password to be removed from config file in upcoming release
-            logger.info('> ' + key + ' : ' + settings.CONFIG_DICT[key])             # Log configuration
+            if log:
+                logger.info('> ' + key + ' : ' + settings.CONFIG_DICT[key])             # Log settings
+
+    vms = []
+    vms = vms_to_protect(settings.CONFIG_DICT['vms_to_protect_filename'])
+    for i in vms:
+        if ('EOF') in i:    # exit at end of vms
+            break
+        else:
+            if not log:
+                logger.info('Protected VM : ' + i)
+
     return settings.CONFIG_DICT
 
 
-''' Function to trigger snapshot and replication within DVX. There are two sub-functions related to using protect_vm_startswith and vms_to_protect_filename. '''
+''' Function to detect if running inside a docker container'''
+
+
+def is_docker():
+    path = '/proc/self/cgroup'
+    return (
+        os.path.exists('/.dockerenv') or
+        os.path.isfile(path) and any('docker' in line for line in open(path))
+    )
+
+
+''' Function to trigger snapshot and replication within DVX. '''
 
 
 def protect(reason: str, replicate: str):
@@ -113,29 +143,39 @@ def vms_to_protect(filename: str):
 
 def main():
 
-    CONFIG_DICT = load_config('main.config')    # Load application parameters
+    CONFIG_DICT = load_config('main.config', True)    # Load application parameters
     settings.DVX = connect_dvx(settings.CONFIG_DICT['prod_dvx_fqdn'], settings.CONFIG_DICT['prod_dvx_username'], settings.CONFIG_DICT['prod_dvx_password'])  # Connect to DVX
 
-    while True:     # execute script forever
+    while True:
 
-        CONFIG_DICT = load_config('main.config')    # Load application parameters
+        CONFIG_DICT = load_config('main.config', False)    # Load application parameters
         logger.info('Checking for natural hazards in ' + CONFIG_DICT['prod_location_city'] + ", " + CONFIG_DICT['prod_location_country'])
 
-        if weather.get_wind(CONFIG_DICT['prod_location_city'], CONFIG_DICT['prod_location_country']) > float(CONFIG_DICT['wind_speed_max']):   # Check for high winds
+        # Function to check for winds
+
+        if weather.get_wind(CONFIG_DICT['prod_location_city'], CONFIG_DICT['prod_location_country']) > float(CONFIG_DICT['wind_speed_max']):
             logger.info('>> High Winds Detected: ' + CONFIG_DICT['prod_location'])
             protect("HighWinds", CONFIG_DICT['repl_replicate'])
-        elif weather.get_temperature(CONFIG_DICT['prod_location_city'], CONFIG_DICT['prod_location_country']) > float(CONFIG_DICT['temperature_max']):     # Check for Temperature
-                                                                                                                # Would be great to add feed for internal datacenter temperature termostat
+
+        # Function to check for temperature
+
+        elif weather.get_temperature(CONFIG_DICT['prod_location_city'], CONFIG_DICT['prod_location_country']) > float(CONFIG_DICT['temperature_max']):
             logger.info('>> High Temperatures Detected: ' + CONFIG_DICT['prod_location_city'] + ', ' + CONFIG_DICT['prod_location_country'])
             protect("HighTemperature", CONFIG_DICT['repl_replicate'])
-        elif earthquake.get_quake(CONFIG_DICT['prod_location_city'], CONFIG_DICT['quake_magnitude_min'], CONFIG_DICT['quake_period']):   # Check for earthquakes
+
+        # Function to check for earthquakes
+
+        elif earthquake.get_quake(CONFIG_DICT['prod_location_city'], CONFIG_DICT['quake_magnitude_min'], CONFIG_DICT['quake_period']):
             logger.info('>>> Earthquake Detected in ' + CONFIG_DICT['prod_location_city'] + ', ' + CONFIG_DICT['prod_location_country'])
             protect("Earthquake", CONFIG_DICT['repl_replicate'])
         else:
             logger.info('No natural hazards')
 
         logger.info('> Waiting ' + str(int(CONFIG_DICT['frequency_check'])/60).split('.')[0] + ' minutes before checking')
+
         time.sleep(int(CONFIG_DICT['frequency_check']))  # Wait for defined frequency_check
+
+        da.test_connection(settings.DVX)    # Test DVX connectivy for each cycle
 
 
 main()

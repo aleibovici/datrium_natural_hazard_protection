@@ -1,0 +1,39 @@
+version: "3"
+
+services:
+  com.myvirtualcloud.dvx.automation:
+    image: andreleibovici/datrium_natural_hazard_protection:latest
+    environment:
+     # Location (City)
+     - prod_location_city=Sunnyvale
+     # Country Abbreviation (2-digit)
+     - prod_location_country=US
+     # DVX Fully-Qualified-Domain-Name
+     - prod_dvx_fqdn=dvx110-mgmt.slab.datrium.com
+     # DVX Admin username
+     - prod_dvx_username=admin
+     # DVX Admin Password
+     - prod_dvx_password=datrium#1
+     # Choose true or false to enable snapshots replication
+     - repl_replicate=false
+     # Replication site target as configures in DVX
+     - repl_location=dvx47
+     # Retain snapshot for the specified amount of time (in seconds) from current time.
+     # Use 'forever' to retain the snapshot forever.
+     - snapshot_retention=3600
+     # Filename containing list of vms to protect
+     - vms_to_protect_filename=vms_to_protect.txt
+     # Frequency to check for natural hazard events (seconds) and snapshot/replicate
+     - frequency_check=300
+     # Km/h
+     - wind_speed_max=40
+     # Celsius
+     - temperature_max=45
+     # Richter scale minimum earthquaque magnitude
+     - quake_magnitude_min=4
+     # "hour", "day", "week", "month"
+     - quake_period=hour
+     # You MUST provide a valid public API key from pyowm
+     - pyowm_api_key=0e5d386b91c4876589407e0f458b2c75
+    volumes:
+      - /Users/andre/Documents/com.myvirtualcloud.dvx.automation/vms_to_protect.txt:/vms_to_protect.txt
