@@ -8,6 +8,7 @@
 # Application Generated
 #
 main.log
+main.config
 vms_to_protect.txt
 
 #
@@ -21,3 +22,4 @@ vms_to_protect.txt
 .vscode/settings.json
 __pycache__/
 com.myvirtualcloud.dvx.automation.code-workspace
+docker-compose.yml
