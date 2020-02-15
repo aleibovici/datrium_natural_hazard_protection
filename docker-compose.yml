@@ -9,15 +9,15 @@ services:
      # Country Abbreviation (2-digit)
      - prod_location_country=US
      # DVX Fully-Qualified-Domain-Name
-     - prod_dvx_fqdn=dvx110-mgmt.slab.datrium.com
+     - prod_dvx_fqdn=
      # DVX Admin username
      - prod_dvx_username=admin
      # DVX Admin Password
-     - prod_dvx_password=datrium#1
+     - prod_dvx_password=
      # Choose true or false to enable snapshots replication
      - repl_replicate=false
      # Replication site target as configures in DVX
-     - repl_location=dvx47
+     - repl_location=
      # Retain snapshot for the specified amount of time (in seconds) from current time.
      # Use 'forever' to retain the snapshot forever.
      - snapshot_retention=3600
@@ -34,6 +34,16 @@ services:
      # "hour", "day", "week", "month"
      - quake_period=hour
      # You MUST provide a valid public API key from pyowm
-     - pyowm_api_key=0e5d386b91c4876589407e0f458b2c75
+     - pyowm_api_key=
+     # SMTP server
+     - smtp_server=smtp.gmail.com
+     # SMTP password
+     - smtp_password=
+     # SMTP Port
+     - smtp_port=587
+     # SMTP_sender_email
+     - smtp_sender_email=
+     # SMTP_receiver_email
+     - smtp_receiver_email=
     volumes:
       - /Users/andre/Documents/com.myvirtualcloud.dvx.automation/vms_to_protect.txt:/vms_to_protect.txt

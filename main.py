@@ -9,6 +9,7 @@ import logging
 import earthquake
 import da
 import weather
+import mailer
 
 ''' Initiate global variables '''
 
@@ -75,8 +76,7 @@ def load_config(configFilePath: str, log: bool):
                 settings.CONFIG_DICT[key] = os.environ[key]
 
     for key in settings.CONFIG_DICT:
-        if (not key == 'prod_dvx_username') and (not key == 'prod_dvx_password') and (not key == 'pyowm_api_key'):   # Do not log username, password and API key
-                                                                                    # Username and password to be removed from config file in upcoming release
+        if (not key == 'prod_dvx_password') and (not key == 'pyowm_api_key') and (not key == 'smtp_password'):   # Do not log passwords and API key
             if log:
                 logger.info('> ' + key + ' : ' + settings.CONFIG_DICT[key])             # Log settings
 
@@ -146,36 +146,58 @@ def main():
     CONFIG_DICT = load_config('main.config', True)    # Load application parameters
     settings.DVX = connect_dvx(settings.CONFIG_DICT['prod_dvx_fqdn'], settings.CONFIG_DICT['prod_dvx_username'], settings.CONFIG_DICT['prod_dvx_password'])  # Connect to DVX
 
+    # Test initial connectivity
+    try:
+        da.test_connection(settings.DVX)
+    except:
+        mailer.send_mail(settings.CONFIG_DICT['smtp_server'], settings.CONFIG_DICT['smtp_port'], settings.CONFIG_DICT['smtp_sender_email'],
+                         settings.CONFIG_DICT['smtp_receiver_email'], settings.CONFIG_DICT['smtp_password'], "Connection to DVX Failed")
+        raise
+
     while True:
 
         CONFIG_DICT = load_config('main.config', False)    # Load application parameters
         logger.info('Checking for natural hazards in ' + CONFIG_DICT['prod_location_city'] + ", " + CONFIG_DICT['prod_location_country'])
 
+        ''' Check for Nautral Hazards '''
+
         # Function to check for winds
 
         if weather.get_wind(CONFIG_DICT['prod_location_city'], CONFIG_DICT['prod_location_country']) > float(CONFIG_DICT['wind_speed_max']):
             logger.info('>> High Winds Detected: ' + CONFIG_DICT['prod_location'])
+            mailer.send_mail(settings.CONFIG_DICT['smtp_server'], settings.CONFIG_DICT['smtp_port'], settings.CONFIG_DICT['smtp_sender_email'],
+                             settings.CONFIG_DICT['smtp_receiver_email'], settings.CONFIG_DICT['smtp_password'], "High Winds Detected")
             protect("HighWinds", CONFIG_DICT['repl_replicate'])
 
         # Function to check for temperature
 
         elif weather.get_temperature(CONFIG_DICT['prod_location_city'], CONFIG_DICT['prod_location_country']) > float(CONFIG_DICT['temperature_max']):
             logger.info('>> High Temperatures Detected: ' + CONFIG_DICT['prod_location_city'] + ', ' + CONFIG_DICT['prod_location_country'])
+            mailer.send_mail(settings.CONFIG_DICT['smtp_server'], settings.CONFIG_DICT['smtp_port'], settings.CONFIG_DICT['smtp_sender_email'],
+                             settings.CONFIG_DICT['smtp_receiver_email'], settings.CONFIG_DICT['smtp_password'], "High Temperatures Detected")
             protect("HighTemperature", CONFIG_DICT['repl_replicate'])
 
         # Function to check for earthquakes
 
         elif earthquake.get_quake(CONFIG_DICT['prod_location_city'], CONFIG_DICT['quake_magnitude_min'], CONFIG_DICT['quake_period']):
             logger.info('>>> Earthquake Detected in ' + CONFIG_DICT['prod_location_city'] + ', ' + CONFIG_DICT['prod_location_country'])
+            mailer.send_mail(settings.CONFIG_DICT['smtp_server'], settings.CONFIG_DICT['smtp_port'], settings.CONFIG_DICT['smtp_sender_email'],
+                             settings.CONFIG_DICT['smtp_receiver_email'], settings.CONFIG_DICT['smtp_password'], "Earthquake Detected")
             protect("Earthquake", CONFIG_DICT['repl_replicate'])
         else:
             logger.info('No natural hazards')
 
         logger.info('> Waiting ' + str(int(CONFIG_DICT['frequency_check'])/60).split('.')[0] + ' minutes before checking')
 
-        time.sleep(int(CONFIG_DICT['frequency_check']))  # Wait for defined frequency_check
+        time.sleep(int(CONFIG_DICT['frequency_check']))  # Sleep for defined frequency_check
 
-        da.test_connection(settings.DVX)    # Test DVX connectivy for each cycle
+        # Test connectivity
+        try:
+            da.test_connection(settings.DVX)
+        except:
+            mailer.send_mail(settings.CONFIG_DICT['smtp_server'], settings.CONFIG_DICT['smtp_port'], settings.CONFIG_DICT['smtp_sender_email'],
+                             settings.CONFIG_DICT['smtp_receiver_email'], settings.CONFIG_DICT['smtp_password'], "Connection to DVX Failed")
+            raise
 
 
 main()

@@ -24,7 +24,6 @@ def connect(ip, username, password):
     logger.info('')
     logger.info('-------------------------------------')
     logger.info('DVX connection sucesfully established')
-    test_connection(dvx1)   # Test DVX connectivy
     return dvx1
 
 
